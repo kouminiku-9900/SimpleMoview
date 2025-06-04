@@ -12,15 +12,19 @@ A lightweight macOS 15+ video and music player written in Swift and built with X
 - Folder selection builds a playlist of all contained files sorted alphanumerically.
 - Ability to shuffle playlist order.
 
+## Building
+
+Open `SimpleMoviewApp/Package.swift` in Xcode and build the "SimpleMoviewApp" target. You can also run it with `swift run` on macOS 15 or later.
+
 ## Todo
 
-1. Create Xcode project targeting macOS 15 or later.
-2. Implement basic audio/video playback engine in Swift.
-3. Add file format handling for MP4 (audio only) and FLAC.
-4. Map keyboard shortcuts to YouTube‑style controls (space, arrow keys, 1‑0, etc.).
-5. Implement previous/next track and playlist handling.
-6. Provide folder picker that loads files and sorts them alphabetically/numerically.
-7. Add shuffle toggle for playlist playback.
-8. Hook into macOS media key events for play/pause.
-9. Build a simple user interface to display current track and playlist.
-10. Add unit tests or UI tests where feasible.
+- [x] Create Xcode project targeting macOS 15 or later.
+- [ ] Implement basic audio/video playback engine in Swift.
+- [ ] Add file format handling for MP4 (audio only) and FLAC.
+- [ ] Map keyboard shortcuts to YouTube‑style controls (space, arrow keys, 1‑0, etc.).
+- [ ] Implement previous/next track and playlist handling.
+- [ ] Provide folder picker that loads files and sorts them alphabetically/numerically.
+- [ ] Add shuffle toggle for playlist playback.
+- [ ] Hook into macOS media key events for play/pause.
+- [ ] Build a simple user interface to display current track and playlist.
+- [ ] Add unit tests or UI tests where feasible.
