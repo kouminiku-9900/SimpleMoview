@@ -13,7 +13,10 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "SimpleMoviewApp",
-            path: "Sources"
+            path: "Sources",
+            linkerSettings: [
+                .linkedFramework("AVKit")
+            ]
         )
     ]
 )
