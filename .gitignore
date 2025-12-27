@@ -2,3 +2,7 @@
 .build/
 .swiftpm/
 *.xcodeproj
+*.app
+*.zip
+*.dSYM
+.DS_Store
