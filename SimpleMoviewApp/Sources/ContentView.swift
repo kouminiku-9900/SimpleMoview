@@ -1,4 +1,6 @@
 import SwiftUI
+import AVKit
+import UniformTypeIdentifiers
 
 struct ContentView: View {
     @EnvironmentObject var player: Player
@@ -6,8 +8,15 @@ struct ContentView: View {
 
     var body: some View {
         VStack {
+            if let avPlayer = player.player {
+                VideoPlayer(player: avPlayer)
+            } else {
+                Spacer()
+                Text("No Video Playing")
+                Spacer()
+            }
             HStack {
-                Button("Open Folder") { showingImporter = true }
+                Button("Open File/Folder") { showingImporter = true }
                 Button(player.isPlaying ? "Pause" : "Play") {
                     player.togglePlayPause()
                 }
@@ -22,10 +31,12 @@ struct ContentView: View {
         }
         .fileImporter(
             isPresented: $showingImporter,
-            allowedContentTypes: [.folder],
+            allowedContentTypes: [.folder, .movie, .audio],
             allowsMultipleSelection: false
         ) { result in
-            player.loadFolder(from: result)
+            if let urls = try? result.get(), let url = urls.first {
+                player.loadFolder(from: .success(url))
+            }
         }
         .frame(minWidth: 400, minHeight: 200)
         .onAppear { player.setupKeyCommands() }

@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import AVFoundation
+import Combine
 
 final class Player: ObservableObject {
     @Published private(set) var isPlaying = false
@@ -8,7 +9,7 @@ final class Player: ObservableObject {
     @Published private(set) var isShuffled = false
     @Published private(set) var playlist: [URL] = []
 
-    private var player: AVPlayer?
+    @Published var player: AVPlayer?
     private var playerItemContext = 0
 
     var currentFilename: String {
@@ -18,10 +19,27 @@ final class Player: ObservableObject {
 
     func loadFolder(from result: Result<URL, Error>) {
         guard case let .success(url) = result else { return }
-        guard let contents = try? FileManager.default.contentsOfDirectory(
-            at: url, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
-        else { return }
-        playlist = contents.sorted { $0.lastPathComponent < $1.lastPathComponent }
+        
+        // Security-scoped access
+        guard url.startAccessingSecurityScopedResource() else { return }
+        defer { url.stopAccessingSecurityScopedResource() }
+
+        var isDirectory: ObjCBool = false
+        FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory)
+
+        if isDirectory.boolValue {
+            guard let contents = try? FileManager.default.contentsOfDirectory(
+                at: url, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
+            else { return }
+            let supportedExtensions = Set(["mp3", "m4a", "aac", "flac", "wav", "mp4", "mov", "m4v"])
+            playlist = contents
+                .filter { supportedExtensions.contains($0.pathExtension.lowercased()) }
+                .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+        } else {
+            // Single file selected
+            playlist = [url]
+        }
+        
         currentIndex = 0
         startCurrent()
     }
@@ -35,10 +53,28 @@ final class Player: ObservableObject {
         }
     }
 
+    private var itemObserver: AnyCancellable?
+
     func startCurrent() {
         guard playlist.indices.contains(currentIndex) else { return }
+        
+        // Stop observing previous item
+        itemObserver?.cancel()
+        
         let item = AVPlayerItem(url: playlist[currentIndex])
-        player = AVPlayer(playerItem: item)
+        
+        // Setup observation for auto-advance
+        itemObserver = NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime, object: item)
+            .sink { [weak self] _ in
+                self?.next()
+            }
+            
+        if player == nil {
+            player = AVPlayer(playerItem: item)
+        } else {
+            player?.replaceCurrentItem(with: item)
+        }
+        
         player?.play()
         isPlaying = true
     }
@@ -80,34 +116,59 @@ final class Player: ObservableObject {
     }
 
     func setupKeyCommands() {
-        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] in
-            self?.handleEvent($0)
-            return $0
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            if self?.handleEvent(event) == true {
+                return nil
+            }
+            return event
         }
     }
 
-    private func handleEvent(_ event: NSEvent) {
-        guard let characters = event.charactersIgnoringModifiers else { return }
-        switch characters {
-        case " " :
+    private func handleEvent(_ event: NSEvent) -> Bool {
+        // Prioritize key codes for special keys
+        switch event.keyCode {
+        case 49: // Space
             togglePlayPause()
-        case "l" :
-            step(by: 5)
-        case "j" :
+            return true
+        case 123: // Left Arrow
             step(by: -5)
-        case "n" :
+            return true
+        case 124: // Right Arrow
+            step(by: 5)
+            return true
+        default:
+            break
+        }
+
+        guard let characters = event.charactersIgnoringModifiers else { return false }
+        switch characters {
+        case "l":
+            step(by: 10)
+            return true
+        case "j":
+            step(by: -10)
+            return true
+        case "k":
+            togglePlayPause()
+            return true
+        case "n":
             next()
-        case "p" :
+            return true
+        case "p":
             previous()
+            return true
         case "1"..."9", "0":
             if let value = Int(characters) {
                 jumpTo(percent: Double(value) / 10.0)
+                return true
             } else if characters == "0" {
                 jumpTo(percent: 0)
+                return true
             }
         default:
             break
         }
+        return false
     }
 
     func step(by seconds: Double) {
