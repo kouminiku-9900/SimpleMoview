@@ -7,7 +7,11 @@ final class Player: ObservableObject {
     @Published private(set) var isPlaying = false
     @Published private(set) var currentIndex = 0
     @Published private(set) var isShuffled = false
+    @Published private(set) var isShuffled = false
     @Published private(set) var playlist: [URL] = []
+    
+    @Published var currentArtwork: NSImage?
+    @Published var hasVideo: Bool = true
 
     @Published var player: AVPlayer?
     private var playerItemContext = 0
@@ -61,7 +65,34 @@ final class Player: ObservableObject {
         // Stop observing previous item
         itemObserver?.cancel()
         
-        let item = AVPlayerItem(url: playlist[currentIndex])
+        // Stop observing previous item
+        itemObserver?.cancel()
+
+        let asset = AVURLAsset(url: playlist[currentIndex])
+        let item = AVPlayerItem(asset: asset)
+
+        // Check for video tracks and artwork
+        Task { @MainActor in
+            // Check if it has video tracks
+            if let tracks = try? await asset.load(.tracks) {
+                let videoTracks = tracks.filter { $0.mediaType == .video }
+                self.hasVideo = !videoTracks.isEmpty
+            }
+            
+            // Load artwork
+            self.currentArtwork = nil
+            if let metadata = try? await asset.load(.metadata) {
+                for item in metadata {
+                    if let commonKey = item.commonKey, commonKey == .commonKeyArtwork {
+                        if let data = try? await item.load(.dataValue),
+                           let image = NSImage(data: data) {
+                            self.currentArtwork = image
+                            break
+                        }
+                    }
+                }
+            }
+        }
         
         // Setup observation for auto-advance
         itemObserver = NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime, object: item)

@@ -8,12 +8,19 @@ struct ContentView: View {
 
     var body: some View {
         VStack {
-            if let avPlayer = player.player {
-                VideoPlayer(player: avPlayer)
-            } else {
-                Spacer()
-                Text("No Video Playing")
-                Spacer()
+            ZStack {
+                if let avPlayer = player.player {
+                    VideoPlayer(player: avPlayer)
+                } else {
+                    Text("No Video Playing")
+                }
+                
+                if !player.hasVideo, let artwork = player.currentArtwork {
+                    Image(nsImage: artwork)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .background(Color.black)
+                }
             }
             HStack {
                 Button("Open File/Folder") { showingImporter = true }

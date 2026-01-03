@@ -1,7 +1,7 @@
 #!/bin/bash
 
 APP_NAME="SimpleMoview"
-SOURCE_DIR="SimpleMoviewApp"
+SOURCE_DIR="Lib/SimpleMoviewApp"
 BUILD_DIR="${SOURCE_DIR}/.build/release"
 APP_BUNDLE="${APP_NAME}.app"
 CONTENTS_DIR="${APP_BUNDLE}/Contents"
@@ -54,6 +54,23 @@ cat > "${CONTENTS_DIR}/Info.plist" <<EOF
     <string>15.0</string>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>Media Files</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Default</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>public.movie</string>
+                <string>public.audio</string>
+                <string>public.content</string>
+            </array>
+        </dict>
+    </array>
 </dict>
 </plist>
 EOF
