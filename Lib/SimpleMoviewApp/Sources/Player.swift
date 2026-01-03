@@ -3,15 +3,21 @@ import SwiftUI
 import AVFoundation
 import Combine
 
+@MainActor
 final class Player: ObservableObject {
     @Published private(set) var isPlaying = false
     @Published private(set) var currentIndex = 0
     @Published private(set) var isShuffled = false
-    @Published private(set) var isShuffled = false
+
     @Published private(set) var playlist: [URL] = []
     
     @Published var currentArtwork: NSImage?
     @Published var hasVideo: Bool = true
+    
+    // Time tracking
+    @Published var duration: Double = 0.0
+    @Published var currentTime: Double = 0.0
+    var isSeeking = false
 
     @Published var player: AVPlayer?
     private var playerItemContext = 0
@@ -106,6 +112,20 @@ final class Player: ObservableObject {
             player?.replaceCurrentItem(with: item)
         }
         
+        // Setup time observer
+        let interval = CMTime(seconds: 0.5, preferredTimescale: 600)
+        player?.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
+            guard let self = self, !self.isSeeking else { return }
+            self.currentTime = time.seconds
+        }
+        
+        // Get duration
+        Task {
+            if let duration = try? await item.asset.load(.duration) {
+                self.duration = duration.seconds
+            }
+        }
+        
         player?.play()
         isPlaying = true
     }
@@ -133,9 +153,9 @@ final class Player: ObservableObject {
         startCurrent()
     }
 
-    private func seek(seconds: Double) {
+    func seek(to seconds: Double) {
         guard let player = player else { return }
-        let time = CMTime(seconds: seconds, preferredTimescale: 1)
+        let time = CMTime(seconds: seconds, preferredTimescale: 600)
         player.seek(to: time)
     }
 

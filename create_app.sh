@@ -15,7 +15,7 @@ if [ $? -ne 0 ]; then
     echo "❌ Build failed."
     exit 1
 fi
-cd ..
+cd - > /dev/null
 
 echo "📦 Creating .app bundle structure..."
 rm -rf "${APP_BUNDLE}"
@@ -45,7 +45,7 @@ cat > "${CONTENTS_DIR}/Info.plist" <<EOF
     <key>CFBundleName</key>
     <string>${APP_NAME}</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
+    <string>1.2</string>
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>CFBundlePackageType</key>

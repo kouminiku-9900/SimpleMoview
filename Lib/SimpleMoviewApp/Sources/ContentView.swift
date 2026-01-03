@@ -7,34 +7,72 @@ struct ContentView: View {
     @State private var showingImporter = false
 
     var body: some View {
-        VStack {
+        VStack(spacing: 0) {
+            // Layer 1: Content (Video or Artwork)
             ZStack {
-                if let avPlayer = player.player {
+                if player.hasVideo, let avPlayer = player.player {
                     VideoPlayer(player: avPlayer)
-                } else {
+                } else if player.player == nil {
                     Text("No Video Playing")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 
                 if !player.hasVideo, let artwork = player.currentArtwork {
                     Image(nsImage: artwork)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .background(Color.black)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            HStack {
-                Button("Open File/Folder") { showingImporter = true }
-                Button(player.isPlaying ? "Pause" : "Play") {
-                    player.togglePlayPause()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            // Layer 2: Controls Area
+            VStack(spacing: 8) {
+                Text(player.currentFilename)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .padding(.horizontal)
+
+                // Progress Bar (Only for Audio/Artwork mode)
+                if !player.hasVideo {
+                    HStack(spacing: 12) {
+                        Text(formatTime(player.currentTime))
+                            .font(.caption)
+                            .monospacedDigit()
+                        
+                        Slider(value: Binding(
+                            get: { player.currentTime },
+                            set: { newValue in
+                                player.isSeeking = true
+                                player.currentTime = newValue
+                                player.seek(to: newValue)
+                            }
+                        ), in: 0...max(0.01, player.duration)) { editing in
+                            player.isSeeking = editing
+                        }
+                        .controlSize(.small)
+                        
+                        Text(formatTime(player.duration))
+                            .font(.caption)
+                            .monospacedDigit()
+                    }
+                    .padding(.horizontal, 20)
                 }
-                Button("Next") { player.next() }
-                Button("Previous") { player.previous() }
-                Button("Shuffle: \(player.isShuffled ? "On" : "Off")") {
-                    player.toggleShuffle()
+
+                HStack {
+                    Button("Open File/Folder") { showingImporter = true }
+                    Button(player.isPlaying ? "Pause" : "Play") {
+                        player.togglePlayPause()
+                    }
+                    Button("Next") { player.next() }
+                    Button("Previous") { player.previous() }
+                    Button("Shuffle: \(player.isShuffled ? "On" : "Off")") {
+                        player.toggleShuffle()
+                    }
                 }
             }
-            Text(player.currentFilename)
-                .padding()
+            .padding(.vertical, 20)
+            .background(Color(NSColor.windowBackgroundColor))
         }
         .fileImporter(
             isPresented: $showingImporter,
@@ -47,6 +85,14 @@ struct ContentView: View {
         }
         .frame(minWidth: 400, minHeight: 200)
         .onAppear { player.setupKeyCommands() }
+    }
+    
+    private func formatTime(_ seconds: Double) -> String {
+        guard !seconds.isNaN, seconds.isFinite else { return "0:00" }
+        let totalSeconds = Int(seconds)
+        let min = totalSeconds / 60
+        let sec = totalSeconds % 60
+        return String(format: "%d:%02d", min, sec)
     }
 }
 
